@@ -61,8 +61,11 @@ the response.
 ### /token
 
 Method: GET
+
 Path params: no
+
 Query params: no
+
 Authorization: no
 
 This endpoint returns a new JWT token when called. It takes no parameters.
@@ -79,7 +82,9 @@ or `JWT_ISSUER` configuration parameters and restarting the service.
 This endpoint returns a weather data from the OWM API.
 
 Method: GET
+
 Path params: no
+
 Query params:
   - `q` (*Required*): a city name (i.e. `?q=Vilnius`) or a city name and a country code separated by comma (i.e. `q=Vilnius,LT`)
 
