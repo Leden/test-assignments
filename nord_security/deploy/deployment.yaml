@@ -1,0 +1,23 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: weatherapi
+  name: weatherapi
+  namespace: weatherapi
+spec:
+  selector:
+    matchLabels:
+      app: weatherapi
+  template:
+    metadata:
+      labels:
+        app: weatherapi
+    spec:
+      containers:
+      - image: weatherapi
+        name: weatherapi
+        imagePullPolicy: IfNotPresent
+        envFrom:
+          - secretRef:
+              name: weatherapi
