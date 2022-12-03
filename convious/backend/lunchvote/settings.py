@@ -54,6 +54,7 @@ INSTALLED_APPS = [
     "django_extensions",
     "django_celery_beat",
     "reversion",
+    "graphene_django",
     # Internal
     "lunchvote.users.apps.UsersConfig",
     "lunchvote.restaurants.apps.RestaurantsConfig",
@@ -195,3 +196,7 @@ CELERY_TASK_SOFT_TIME_LIMIT = (
 
 # Default Auto Field
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+
+
+# GraphQL
+GRAPHENE = {"SCHEMA": "lunchvote.api.schema.schema"}
