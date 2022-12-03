@@ -56,6 +56,7 @@ INSTALLED_APPS = [
     "reversion",
     # Internal
     "lunchvote.users.apps.UsersConfig",
+    "lunchvote.restaurants.apps.RestaurantsConfig",
 ]
 
 MIDDLEWARE = [
