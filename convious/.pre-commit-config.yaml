@@ -1,0 +1,59 @@
+# See https://pre-commit.com for more information
+# See https://pre-commit.com/hooks.html for more hooks
+
+exclude: '^backend/lunchvote/.*/migrations/.*\.py$'
+
+repos:
+- repo: meta
+  hooks:
+  - id: check-hooks-apply
+  - id: check-useless-excludes
+
+- repo: https://github.com/pre-commit/pre-commit-hooks
+  rev: v4.2.0
+  hooks:
+    - id: check-added-large-files
+    - id: check-json
+    - id: check-merge-conflict
+    - id: check-toml
+    #- id: check-xml
+    - id: check-yaml
+    - id: end-of-file-fixer
+    - id: trailing-whitespace
+
+- repo: https://github.com/timothycrosley/isort/
+  rev: 5.10.1
+  hooks:
+    - id: isort
+
+- repo: https://github.com/psf/black
+  rev: 22.3.0
+  hooks:
+    - id: black
+      language_version: python3.11
+
+- repo: https://github.com/myint/autoflake
+  rev: v1.4
+  hooks:
+    - id: autoflake
+      args: [--ignore-init-module-imports, --remove-all-unused-imports, --in-place]
+
+- repo: https://github.com/pycqa/flake8
+  rev: 3.9.2
+  hooks:
+    - id: flake8
+      additional_dependencies:
+        - flake8-bugbear==22.4.25
+        - flake8-pytest-style==1.6.0
+        - flake8-django==1.1.2
+
+- repo: https://github.com/pycqa/bandit
+  rev: 1.7.4
+  hooks:
+    - id: bandit
+      args: [-x, 'backend/lunchvote/*/tests.py,backend/lunchvote/*/tests/*']
+
+- repo: https://github.com/pre-commit/mirrors-mypy
+  rev: v0.950
+  hooks:
+    - id: mypy
