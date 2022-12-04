@@ -18,3 +18,4 @@ def update_restaurant(*, uuid: UUID, name: str) -> Restaurant:
 def delete_restaurant(*, uuid: UUID) -> None:
     restaurant = Restaurant.objects.get(uuid=uuid)
     restaurant.delete()
+    return restaurant
