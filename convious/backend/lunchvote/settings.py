@@ -58,6 +58,7 @@ INSTALLED_APPS = [
     # Internal
     "lunchvote.users.apps.UsersConfig",
     "lunchvote.restaurants.apps.RestaurantsConfig",
+    "lunchvote.votes.apps.VotesConfig",
 ]
 
 MIDDLEWARE = [
@@ -175,6 +176,10 @@ LOGGING: t.Dict[str, t.Any] = {
             "level": "DEBUG" if DEBUG else "INFO",
             "propagate": True,
         },
+        "django.db.backends": {
+            "handlers": ["console"],
+            "level": "DEBUG" if DEBUG else "INFO",
+        },
     },
 }
 
@@ -200,3 +205,9 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 # GraphQL
 GRAPHENE = {"SCHEMA": "lunchvote.api.schema.schema"}
+
+
+# LunchVote
+LUNCHVOTE_VOTES_USER_VOTES_PER_DAY = int(
+    os.environ.get("LUNCHVOTE_VOTES_USER_VOTES_PER_DAY", 5)
+)

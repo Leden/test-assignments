@@ -13,7 +13,7 @@ class RestaurantType(DjangoObjectType):
         fields = ("uuid", "name")
 
 
-class Query(graphene.ObjectType):
+class Query:
     restaurants = graphene.List(graphene.NonNull(RestaurantType))
 
     def resolve_restaurants(root, info):
@@ -71,10 +71,7 @@ class DeleteRestaurant(graphene.Mutation):
         return DeleteRestaurant(restaurant=restaurant)
 
 
-class Mutation(graphene.ObjectType):
+class Mutation:
     create_restaurant = CreateRestaurant.Field()
     update_restaurant = UpdateRestaurant.Field()
     delete_restaurant = DeleteRestaurant.Field()
-
-
-schema = graphene.Schema(query=Query, mutation=Mutation)
