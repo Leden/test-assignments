@@ -1,4 +1,5 @@
 import datetime as dt
+import typing as t
 from decimal import Decimal as D
 from uuid import UUID
 
@@ -108,3 +109,8 @@ def get_winner_history(
     # Swap restaurant IDs (int) for Restaurant model instances for the final result.
     restaurants_by_id = Restaurant.objects.in_bulk(winners_by_date.values())
     return {d: restaurants_by_id[id] for d, id in winners_by_date.items()}
+
+
+def get_restaurant_today_votes(*, restaurant: Restaurant) -> t.Iterable[Vote]:
+    today = timezone.now().date()
+    return restaurant.votes.filter(date=today)

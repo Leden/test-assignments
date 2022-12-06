@@ -13,8 +13,8 @@ document.addEventListener('DOMContentLoaded', () => {
    * Msg
    */
   const Msg = {
-    GOT_RESTAURANTS_RESP: function (...args) { this.args = args; },
-    CLICK_VOTE: function (...args) { this.args = args; },
+    RESTAURANTS_RESP: function (...args) { this.args = args; },
+    VOTE_CLICK: function (...args) { this.args = args; },
     UPVOTE_RESP: function (...args) { this.args = args; },
   };
 
@@ -24,10 +24,21 @@ document.addEventListener('DOMContentLoaded', () => {
    */
   const init = () => {
     return [
-      { restaurants: [{uuid: 1, name: "Foo"},
-                      {uuid: 2, name: "Bar"}] },
+      { restaurants: [] },
       [
-        GraphQL(Msg.GOT_RESTAURANTS_RESP, `query { restaurants { uuid name } }`)
+        GraphQL(Msg.RESTAURANTS_RESP, `
+          query {
+            restaurants {
+              uuid
+              name
+              todayVotes {
+                weight
+                user {
+                  uuid
+                }
+              }
+            }
+          }`)
       ]
     ];
   };
@@ -37,16 +48,15 @@ document.addEventListener('DOMContentLoaded', () => {
    * Update
    */
   const update = (model, msg) => {
-    //console.log({msg, Msg});
     switch (msg.constructor) {
-      case Msg.GOT_RESTAURANTS_RESP:
+      case Msg.RESTAURANTS_RESP:
         const restaurants = msg.args[0].data.restaurants;
         return [
-          {...model, restaurants},
+          updateRestaurants(restaurants, model),
           []
         ];
 
-      case Msg.CLICK_VOTE:
+      case Msg.VOTE_CLICK:
         return [
           model,
           [
@@ -57,6 +67,12 @@ document.addEventListener('DOMContentLoaded', () => {
                     restaurant {
                       uuid
                       name
+                      todayVotes {
+                        weight
+                        user {
+                          uuid
+                        }
+                      }
                     }
                   }
                 }
@@ -68,10 +84,48 @@ document.addEventListener('DOMContentLoaded', () => {
         ];
 
       case Msg.UPVOTE_RESP:
-        return [ model, [] ];
+        return [
+          updateSingleRestaurant(msg.args[0].data.upvoteRestaurant.vote.restaurant, model),
+          []
+        ];
     }
     return [model, []];
   };
+
+  const updateSingleRestaurant = (restaurant, model) => {
+    const restaurants = sortRestaurants(model.restaurants.map(
+      (r) => (r.uuid === restaurant.uuid) ? hydrateRestaurant(restaurant) : r
+    ));
+    return {...model, restaurants};
+  };
+
+  const updateRestaurants = (restaurants, model) => {
+    return {
+      ...model,
+      restaurants: sortRestaurants(restaurants.map(hydrateRestaurant))
+    };
+  }
+
+  const hydrateRestaurant = (restaurant) => {
+    let todayVotesWeight = 0;
+    const users = new Set();
+    restaurant.todayVotes.forEach(({weight, user: { uuid }}) => {
+      todayVotesWeight += parseFloat(weight);
+      users.add(uuid);
+    });
+    return {...restaurant, todayVotesWeight, todayVotesUsers: users.size}
+  };
+
+  const sortRestaurants = (restaurants) => Array.of(...restaurants).sort(
+    (a, b) => {
+      if (a.todayVotesWeight < b.todayVotesWeight) return 1;
+      if (a.todayVotesWeight > b.todayVotesWeight) return -1;
+      if (a.todayVotesUsers < b.todayVotesUsers) return 1;
+      if (a.todayVotesUsers > b.todayVotesUsers) return -1;
+      if (a.name < b.name) return -1;
+      if (a.name > b.name) return 1;
+      return 0;
+    });
 
 
   /*
@@ -83,24 +137,32 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const restaurantsList = (list) => {
     return `
-      <ul class="restaurantsList">
+      <table class="restaurantsList">
+        <tr>
+          <th>Restaurant</th>
+          <th>Votes weight</th>
+          <th>Users voted</th>
+          <th></th>
+        </tr>
         ${list.map(restaurantsListItem).join('')}
-      </ul>
+      </table>
     `;
   }
 
-  const restaurantsListItem = ({uuid, name}) => {
+  const restaurantsListItem = ({uuid, name, todayVotesWeight, todayVotesUsers}) => {
     return `
-      <li class="restaurantsListItem" id="${uuid}">
-        ${name}
-        ${voteButton(uuid)}
-      </li>
+      <tr class="restaurantsListItem" id="${uuid}">
+        <td>${name}</td>
+        <td>${todayVotesWeight}</td>
+        <td>${todayVotesUsers}</td>
+        <td>${voteButton(uuid)}</td>
+      </tr>
     `;
   };
 
   const voteButton = (uuid) => {
     return `
-      <button onClick="window.app.handleEvent('CLICK_VOTE', '${uuid}')">
+      <button class="voteButton" onClick="window.app.handleEvent('VOTE_CLICK', '${uuid}')">
         Vote
       </button>
     `;

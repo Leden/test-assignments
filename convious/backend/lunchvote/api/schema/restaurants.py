@@ -5,12 +5,20 @@ from lunchvote.restaurants.models import Restaurant
 from lunchvote.restaurants.services import create_restaurant
 from lunchvote.restaurants.services import delete_restaurant
 from lunchvote.restaurants.services import update_restaurant
+from lunchvote.votes.services import get_restaurant_today_votes
 
 
 class RestaurantType(DjangoObjectType):
     class Meta:
         model = Restaurant
         fields = ("uuid", "name")
+
+    today_votes = graphene.List(
+        graphene.NonNull(graphene.lazy_import("lunchvote.api.schema.votes.VoteType"))
+    )
+
+    def resolve_today_votes(parent, info):
+        return get_restaurant_today_votes(restaurant=parent)
 
 
 class Query:

@@ -208,3 +208,11 @@ def test_get_winner_history(user_factory, restaurant_factory, faker, settings):
         d2: r1,
         d3: r2,
     }
+
+
+def test_get_restaurant_today_votes(user, restaurant):
+    vote = services.upvote_restaurant(restaurant_uuid=restaurant.uuid, user=user)
+
+    votes = services.get_restaurant_today_votes(restaurant=restaurant)
+
+    assert list(votes) == [vote]
