@@ -8,12 +8,22 @@
     <div id="app"></div>
     <script>
 document.addEventListener('DOMContentLoaded', () => {
+  /*
+   * Constants
+   */
+  const MILLISECOND = 1;
+  const SECOND = 1000 * MILLISECOND;
+  const MINUTE = 60 * SECOND;
+  const HOUR = 60 * MINUTE;
+  const DAY = 24 * HOUR;
+  const WEEK = 7 * DAY;
+
 
   /*
    * Msg
    */
   const Msg = {
-    RESTAURANTS_RESP: function (...args) { this.args = args; },
+    RESTAURANTS_AND_WINNERS_RESP: function (...args) { this.args = args; },
     VOTE_CLICK: function (...args) { this.args = args; },
     UPVOTE_RESP: function (...args) { this.args = args; },
   };
@@ -23,11 +33,16 @@ document.addEventListener('DOMContentLoaded', () => {
    * init
    */
   const init = () => {
+    const now = new Date();
+    const yesterday = addDateDelta(now, -DAY);
+    const weekAgo = addDateDelta(yesterday, -WEEK);
+    const fromDate = weekAgo.toJSON().slice(0, 10);
+    const toDate = yesterday.toJSON().slice(0, 10);
     return [
-      { restaurants: [] },
+      { restaurants: [], history: [] },
       [
-        GraphQL(Msg.RESTAURANTS_RESP, `
-          query {
+        GraphQL(Msg.RESTAURANTS_AND_WINNERS_RESP, `
+          query($fromDate: Date!, $toDate: Date!) {
             restaurants {
               uuid
               name
@@ -38,9 +53,22 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
               }
             }
-          }`)
+            winners(fromDate: $fromDate, toDate: $toDate) {
+              date
+              restaurant {
+                uuid
+                name
+              }
+            }
+          }`, { fromDate, toDate })
       ]
     ];
+  };
+
+  const addDateDelta = (date, deltaMs) => {
+    const result = new Date();
+    result.setTime(date.getTime() + deltaMs);
+    return result;
   };
 
 
@@ -49,10 +77,10 @@ document.addEventListener('DOMContentLoaded', () => {
    */
   const update = (model, msg) => {
     switch (msg.constructor) {
-      case Msg.RESTAURANTS_RESP:
-        const restaurants = msg.args[0].data.restaurants;
+      case Msg.RESTAURANTS_AND_WINNERS_RESP:
+        const { restaurants, winners } = msg.args[0].data;
         return [
-          updateRestaurants(restaurants, model),
+          updateHistory(winners, updateRestaurants(restaurants, model)),
           []
         ];
 
@@ -127,12 +155,30 @@ document.addEventListener('DOMContentLoaded', () => {
       return 0;
     });
 
+  const updateHistory = (history, model) => {
+    return {
+      ...model,
+      history: Array.of(...history).reverse()
+    };
+  };
 
   /*
    * View
    */
-  const view = ({restaurants}) => {
-    return restaurantsList(restaurants);
+  const view = ({restaurants, history}) => {
+    return `
+      <h1>Today</h1>
+      <section>
+        ${restaurantsList(restaurants)}
+      </section>
+
+      <hr/>
+
+      <h1>History</h1>
+      <section>
+        ${historyList(history)}
+      </section>
+      `;
   };
 
   const restaurantsList = (list) => {
@@ -165,6 +211,23 @@ document.addEventListener('DOMContentLoaded', () => {
       <button class="voteButton" onClick="window.app.handleEvent('VOTE_CLICK', '${uuid}')">
         Vote
       </button>
+    `;
+  };
+
+  const historyList = (history) => {
+    return `
+      <table class="historyList">
+        ${history.map(historyListItem).join('')}
+      </table>
+    `;
+  };
+
+  const historyListItem = ({date, restaurant: { name }}) => {
+    return `
+      <tr class="historyListItem">
+        <td>${date}</td>
+        <td>${name}</td>
+      </tr>
     `;
   };
 
