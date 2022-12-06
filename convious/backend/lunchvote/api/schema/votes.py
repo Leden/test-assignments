@@ -72,7 +72,7 @@ class UpvoteRestaurant(graphene.Mutation):
     class Arguments:
         input = UpvoteRestaurantInput(required=True)
 
-    vote = graphene.Field(graphene.NonNull(VoteType))
+    vote = graphene.Field(VoteType)
 
     def mutate(root, info, input):
         user = info.context.user

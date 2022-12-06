@@ -205,7 +205,11 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 
 # GraphQL
-GRAPHENE = {"SCHEMA": "lunchvote.api.schema.schema"}
+GRAPHENE = {
+    "SCHEMA": "lunchvote.api.schema.schema",
+    "MIDDLEWARE": [],  # TODO: authentication
+    "ATOMIC_MUTATIONS": True,
+}
 
 
 # LunchVote

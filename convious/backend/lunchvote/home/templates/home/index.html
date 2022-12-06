@@ -39,7 +39,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const fromDate = weekAgo.toJSON().slice(0, 10);
     const toDate = yesterday.toJSON().slice(0, 10);
     return [
-      { restaurants: [], history: [] },
+      { restaurants: [], history: [], errors: [] },
       [
         GraphQL(Msg.RESTAURANTS_AND_WINNERS_RESP, `
           query($fromDate: Date!, $toDate: Date!) {
@@ -104,18 +104,19 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                   }
                 }
-              }
-              `, {
-                input: { restaurantUuid: msg.args[0] }
-              })
+              }`, { input: { restaurantUuid: msg.args[0] } })
           ]
         ];
 
       case Msg.UPVOTE_RESP:
-        return [
-          updateSingleRestaurant(msg.args[0].data.upvoteRestaurant.vote.restaurant, model),
-          []
-        ];
+        const resp = msg.args[0];
+        let newModel;
+        if (resp?.errors?.length) {
+          newModel = updateErrors(resp.errors, model);
+        } else {
+          newModel = updateSingleRestaurant(resp.data.upvoteRestaurant.vote.restaurant, model);
+        }
+        return [ newModel, [] ];
     }
     return [model, []];
   };
@@ -162,10 +163,17 @@ document.addEventListener('DOMContentLoaded', () => {
     };
   };
 
+  const updateErrors = (errors, model) => {
+    return {
+      ...model,
+      errors: [...model.errors, ...errors]
+    };
+  };
+
   /*
    * View
    */
-  const view = ({restaurants, history}) => {
+  const view = ({restaurants, history, errors}) => {
     return `
       <h1>Today</h1>
       <section>
@@ -178,6 +186,9 @@ document.addEventListener('DOMContentLoaded', () => {
       <section>
         ${historyList(history)}
       </section>
+
+      <hr/>
+      ${errorsList(errors)}
       `;
   };
 
@@ -228,6 +239,16 @@ document.addEventListener('DOMContentLoaded', () => {
         <td>${date}</td>
         <td>${name}</td>
       </tr>
+    `;
+  };
+
+  const errorsList = (errors) => {
+    if (!errors.length) return "";
+
+    const lines = errors.map(({message})=>message).join('\n');
+    return `
+      <h3>Errors</h3>
+      <textarea cols="80" rows=10 readonly class="errorsList">${lines}</textarea>
     `;
   };
 
