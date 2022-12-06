@@ -76,7 +76,8 @@ class UpvoteRestaurant(graphene.Mutation):
 
     def mutate(root, info, input):
         user = info.context.user
-        return upvote_restaurant(restaurant_uuid=input.restaurant_uuid, user=user)
+        vote = upvote_restaurant(restaurant_uuid=input.restaurant_uuid, user=user)
+        return UpvoteRestaurant(vote=vote)
 
 
 class Mutation:

@@ -59,6 +59,7 @@ INSTALLED_APPS = [
     "lunchvote.users.apps.UsersConfig",
     "lunchvote.restaurants.apps.RestaurantsConfig",
     "lunchvote.votes.apps.VotesConfig",
+    "lunchvote.home.apps.HomeConfig",
 ]
 
 MIDDLEWARE = [

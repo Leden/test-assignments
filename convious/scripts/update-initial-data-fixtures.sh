@@ -8,7 +8,9 @@ dumpdata () {
 
 dump_initial_data () {
   app="$1"
-  dumpdata "$@" >"lunchvote/$app/fixtures/initial_data.json"
+  dir="lunchvote/$app/fixtures"
+  mkdir -p "$dir"
+  dumpdata "$@" >"$dir/initial_data.json"
 }
 
 
@@ -16,3 +18,4 @@ python manage.py makemigrations
 python manage.py migrate
 
 dump_initial_data users auth
+dump_initial_data restaurants

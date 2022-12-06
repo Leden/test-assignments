@@ -616,10 +616,98 @@
   }
 },
 {
+  "model": "auth.permission",
+  "fields": {
+    "name": "Can add restaurant",
+    "content_type": [
+      "restaurants",
+      "restaurant"
+    ],
+    "codename": "add_restaurant"
+  }
+},
+{
+  "model": "auth.permission",
+  "fields": {
+    "name": "Can change restaurant",
+    "content_type": [
+      "restaurants",
+      "restaurant"
+    ],
+    "codename": "change_restaurant"
+  }
+},
+{
+  "model": "auth.permission",
+  "fields": {
+    "name": "Can delete restaurant",
+    "content_type": [
+      "restaurants",
+      "restaurant"
+    ],
+    "codename": "delete_restaurant"
+  }
+},
+{
+  "model": "auth.permission",
+  "fields": {
+    "name": "Can view restaurant",
+    "content_type": [
+      "restaurants",
+      "restaurant"
+    ],
+    "codename": "view_restaurant"
+  }
+},
+{
+  "model": "auth.permission",
+  "fields": {
+    "name": "Can add vote",
+    "content_type": [
+      "votes",
+      "vote"
+    ],
+    "codename": "add_vote"
+  }
+},
+{
+  "model": "auth.permission",
+  "fields": {
+    "name": "Can change vote",
+    "content_type": [
+      "votes",
+      "vote"
+    ],
+    "codename": "change_vote"
+  }
+},
+{
+  "model": "auth.permission",
+  "fields": {
+    "name": "Can delete vote",
+    "content_type": [
+      "votes",
+      "vote"
+    ],
+    "codename": "delete_vote"
+  }
+},
+{
+  "model": "auth.permission",
+  "fields": {
+    "name": "Can view vote",
+    "content_type": [
+      "votes",
+      "vote"
+    ],
+    "codename": "view_vote"
+  }
+},
+{
   "model": "users.user",
   "fields": {
-    "password": "pbkdf2_sha256$216000$CvJJpPa14N16$xJ3b2swR0tgE/vBXuxKe05DKKIVviVowfKBuPEtpAys=",
-    "last_login": null,
+    "password": "pbkdf2_sha256$260000$1HDhkHWJzhMX0a4Q5HyuoZ$UZXfsD68g4AcFbjDIWQnT6LKdAHkaWhzH9bA48xPH9g=",
+    "last_login": "2022-12-06T17:25:16.569Z",
     "is_superuser": true,
     "username": "root",
     "first_name": "",

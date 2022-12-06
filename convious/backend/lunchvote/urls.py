@@ -7,4 +7,5 @@ from django.urls import path
 urlpatterns = [
     path("api/", include("lunchvote.api.urls")),
     path("admin/", admin.site.urls),
+    path("", include("lunchvote.home.urls")),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

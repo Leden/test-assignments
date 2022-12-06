@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <style>
+    </style>
+  </head>
+  <body>
+    <div id="app"></div>
+    <script>
+document.addEventListener('DOMContentLoaded', () => {
+
+  /*
+   * Msg
+   */
+  const Msg = {
+    GOT_RESTAURANTS_RESP: function (...args) { this.args = args; },
+    CLICK_VOTE: function (...args) { this.args = args; },
+    UPVOTE_RESP: function (...args) { this.args = args; },
+  };
+
+
+  /*
+   * init
+   */
+  const init = () => {
+    return [
+      { restaurants: [{uuid: 1, name: "Foo"},
+                      {uuid: 2, name: "Bar"}] },
+      [
+        GraphQL(Msg.GOT_RESTAURANTS_RESP, `query { restaurants { uuid name } }`)
+      ]
+    ];
+  };
+
+
+  /*
+   * Update
+   */
+  const update = (model, msg) => {
+    //console.log({msg, Msg});
+    switch (msg.constructor) {
+      case Msg.GOT_RESTAURANTS_RESP:
+        const restaurants = msg.args[0].data.restaurants;
+        return [
+          {...model, restaurants},
+          []
+        ];
+
+      case Msg.CLICK_VOTE:
+        return [
+          model,
+          [
+            GraphQL(Msg.UPVOTE_RESP, `
+              mutation upvoteRestaurant($input: UpvoteRestaurantInput!) {
+                upvoteRestaurant(input: $input) {
+                  vote {
+                    restaurant {
+                      uuid
+                      name
+                    }
+                  }
+                }
+              }
+              `, {
+                input: { restaurantUuid: msg.args[0] }
+              })
+          ]
+        ];
+
+      case Msg.UPVOTE_RESP:
+        return [ model, [] ];
+    }
+    return [model, []];
+  };
+
+
+  /*
+   * View
+   */
+  const view = ({restaurants}) => {
+    return restaurantsList(restaurants);
+  };
+
+  const restaurantsList = (list) => {
+    return `
+      <ul class="restaurantsList">
+        ${list.map(restaurantsListItem).join('')}
+      </ul>
+    `;
+  }
+
+  const restaurantsListItem = ({uuid, name}) => {
+    return `
+      <li class="restaurantsListItem" id="${uuid}">
+        ${name}
+        ${voteButton(uuid)}
+      </li>
+    `;
+  };
+
+  const voteButton = (uuid) => {
+    return `
+      <button onClick="window.app.handleEvent('CLICK_VOTE', '${uuid}')">
+        Vote
+      </button>
+    `;
+  };
+
+
+  /*
+   * Utils
+   */
+  class App {
+    constructor(init, update, view, msgType, node) {
+      this.init = init;
+      this.update = update;
+      this.view = view;
+      this.msgType = msgType;
+      this.node = node;
+      this.model = null;
+      this.commands = [];
+    }
+
+    start() {
+      this.execute(this.init)
+    }
+
+    execute(fn) {
+      const [model, commands] = fn();
+      this.model = model;
+      this.pushCommands(commands);
+      this.render();
+      this.handleCommands();
+    }
+
+    pushCommands(commands) {
+      // TODO: handle invalid input
+      this.commands.push(...commands);
+    }
+
+    render() {
+      const html = this.view(this.model);
+      this.node.innerHTML = html;
+    }
+
+    handleCommands() {
+      if (!this.commands.length) return;
+      const cmd = this.commands.shift();
+      this.executeCommand(cmd);
+      this.handleCommands();
+    }
+
+    executeCommand(cmd) {
+      new Promise((resolve) => {
+        resolve(cmd.fn(...cmd.args))
+      }).then((val) => this.handleMessage(new cmd.msg(val)));
+    }
+
+    handleMessage(msg) {
+      this.execute(() => this.update(this.model, msg));
+    }
+
+    handleEvent(name, ...args) {
+      const ctor = this.msgType[name];
+      const msg = new ctor(...args);
+      this.handleMessage(msg);
+    }
+  };
+
+  function Messages  (names)  {
+    const result = {};
+    for (const name of names) {
+      const msgType = (...args) => ([name, ...args]);
+      msgType.name = name;
+      result[name] = msgType;
+    }
+    return result;
+  };
+
+  const Cmd = (fn) => (msg, ...args) => {
+    return {fn, msg, args};
+  };
+
+  const FetchCmd = Cmd((url, opts) => {
+    return fetch(url, opts).then(resp=>resp.json());
+  });
+
+  const GraphQL = (msg, query, variables) =>
+    FetchCmd(msg, '/api/graphql', {
+      method: 'post',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ query, variables })
+    });
+
+
+  /*
+   * App
+   */
+  window.app = new App(init, update, view, Msg, document.getElementById('app'));
+  window.app.start();
+});
+    </script>
+  </body>
+</html>

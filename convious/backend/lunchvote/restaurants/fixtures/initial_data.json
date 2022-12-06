@@ -1,0 +1,82 @@
+[
+{
+  "model": "restaurants.restaurant",
+  "pk": 1,
+  "fields": {
+    "uuid": "78fbb05d-8f99-44ff-9c7a-f0f4f2413887",
+    "name": "Etno Dvaras"
+  }
+},
+{
+  "model": "restaurants.restaurant",
+  "pk": 2,
+  "fields": {
+    "uuid": "244702f6-7934-4763-a95c-16f453c0fe17",
+    "name": "Meat Lovers"
+  }
+},
+{
+  "model": "restaurants.restaurant",
+  "pk": 3,
+  "fields": {
+    "uuid": "2419e84c-9033-4549-b635-26086e826f5a",
+    "name": "Chaika"
+  }
+},
+{
+  "model": "restaurants.restaurant",
+  "pk": 4,
+  "fields": {
+    "uuid": "c08ad513-24c9-4cf9-808b-ca57b64acfaa",
+    "name": "Bunte Gans"
+  }
+},
+{
+  "model": "restaurants.restaurant",
+  "pk": 5,
+  "fields": {
+    "uuid": "8e94c984-f337-436c-bf1e-6d0da1284fb3",
+    "name": "Lauro Lapas"
+  }
+},
+{
+  "model": "restaurants.restaurant",
+  "pk": 6,
+  "fields": {
+    "uuid": "7b15e606-e78c-4d08-b4fd-2cf153a6cc58",
+    "name": "Mykolo 4"
+  }
+},
+{
+  "model": "restaurants.restaurant",
+  "pk": 7,
+  "fields": {
+    "uuid": "21f8c973-5605-49e8-beca-2949eb1a4759",
+    "name": "Senoji Trobelė"
+  }
+},
+{
+  "model": "restaurants.restaurant",
+  "pk": 8,
+  "fields": {
+    "uuid": "d09e8f47-901e-4372-99cb-cd19f35c04d6",
+    "name": "Pinavija Café & Bakery"
+  }
+},
+{
+  "model": "restaurants.restaurant",
+  "pk": 9,
+  "fields": {
+    "uuid": "604ca0ed-fef3-4ddb-a90d-be03c92750f1",
+    "name": "Sugamour"
+  }
+},
+{
+  "model": "restaurants.restaurant",
+  "pk": 10,
+  "fields": {
+    "uuid": "07e6358b-e082-4ec0-8c6a-d4e466796c6f",
+    "name": "Lokys"
+  }
+}
+]
