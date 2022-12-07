@@ -20,17 +20,121 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
   /*
-   * Msg
+   * Messages
    */
   const Msg = {
-    RESTAURANTS_AND_WINNERS_RESP: function (...args) { this.args = args; },
-    VOTE_CLICK: function (...args) { this.args = args; },
-    UPVOTE_RESP: function (...args) { this.args = args; },
+    RESTAURANTS_AND_WINNERS_RESP: function (resp) { this.resp = resp; },
+    VOTE_CLICK: function (uuid) { this.restaurantUuid = uuid; },
+    UPVOTE_RESP: function (resp) { this.resp = resp; },
+    TOKEN_AUTH_RESP: function (resp) { this.resp = resp; },
+    LOGINFORM_SUBMIT_CLICK: function () {},
+    ME_RESP: function (resp) { this.resp = resp; },
   };
 
 
   /*
-   * init
+   * Commands
+   */
+  const Cmd = (fn) => (msg, ...args) => {
+    return {fn, msg, args};
+  };
+
+  const Fetch = Cmd((url, opts) => {
+    return fetch(url, opts).then(resp=>resp.json());
+  });
+
+  const GraphQL = (msg, query, variables, authToken) =>
+    Fetch(msg, '/api/graphql', {
+      method: 'post',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(authToken ? {Authorization: `Bearer ${authToken}`} : {})
+      },
+      body: JSON.stringify({ query, variables })
+    });
+
+  const RestaurantsAndWinnersQuery = (fromDate, toDate, authToken) => GraphQL(
+    Msg.RESTAURANTS_AND_WINNERS_RESP,
+    `
+    query($fromDate: Date!, $toDate: Date!) {
+      restaurants {
+        uuid
+        name
+        todayVotes {
+          weight
+          user {
+            uuid
+          }
+        }
+      }
+      winners(fromDate: $fromDate, toDate: $toDate) {
+        date
+        restaurant {
+          uuid
+          name
+        }
+      }
+    }`,
+    { fromDate, toDate },
+    authToken
+  );
+
+  const UpvoteRestaurantMutation = (restaurantUuid, authToken) => GraphQL(
+    Msg.UPVOTE_RESP,
+    `
+    mutation upvoteRestaurant($input: UpvoteRestaurantInput!) {
+      upvoteRestaurant(input: $input) {
+        vote {
+          restaurant {
+            uuid
+            name
+            todayVotes {
+              weight
+              user {
+                uuid
+              }
+            }
+          }
+        }
+      }
+    }`,
+    { input: { restaurantUuid } },
+    authToken
+  );
+
+  const TokenAuthMutation = (username, password) => GraphQL(
+    Msg.TOKEN_AUTH_RESP,
+    `
+    mutation tokenAuth($username: String!, $password: String!) {
+      tokenAuth(username: $username, password: $password) {
+        token
+        payload
+        refreshExpiresIn
+      }
+    }
+    `,
+    { username, password }
+  );
+
+  const MeQuery = (authToken) => GraphQL(
+    Msg.ME_RESP,
+    `
+    query {
+      me {
+        firstName
+        lastName
+        email
+        uuid
+      }
+    }
+    `,
+    {},
+    authToken
+  );
+
+
+  /*
+   * Init
    */
   const init = () => {
     const now = new Date();
@@ -39,28 +143,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const fromDate = weekAgo.toJSON().slice(0, 10);
     const toDate = yesterday.toJSON().slice(0, 10);
     return [
-      { restaurants: [], history: [], errors: [] },
+      { restaurants: [], history: [], errors: [], auth: null, user: null },
       [
-        GraphQL(Msg.RESTAURANTS_AND_WINNERS_RESP, `
-          query($fromDate: Date!, $toDate: Date!) {
-            restaurants {
-              uuid
-              name
-              todayVotes {
-                weight
-                user {
-                  uuid
-                }
-              }
-            }
-            winners(fromDate: $fromDate, toDate: $toDate) {
-              date
-              restaurant {
-                uuid
-                name
-              }
-            }
-          }`, { fromDate, toDate })
+        RestaurantsAndWinnersQuery(fromDate, toDate)
       ]
     ];
   };
@@ -77,46 +162,69 @@ document.addEventListener('DOMContentLoaded', () => {
    */
   const update = (model, msg) => {
     switch (msg.constructor) {
-      case Msg.RESTAURANTS_AND_WINNERS_RESP:
-        const { restaurants, winners } = msg.args[0].data;
+      case Msg.RESTAURANTS_AND_WINNERS_RESP: {
+        const { restaurants, winners } = msg.resp.data;
         return [
           updateHistory(winners, updateRestaurants(restaurants, model)),
           []
         ];
+      }
 
-      case Msg.VOTE_CLICK:
+      case Msg.VOTE_CLICK: {
         return [
           model,
-          [
-            GraphQL(Msg.UPVOTE_RESP, `
-              mutation upvoteRestaurant($input: UpvoteRestaurantInput!) {
-                upvoteRestaurant(input: $input) {
-                  vote {
-                    restaurant {
-                      uuid
-                      name
-                      todayVotes {
-                        weight
-                        user {
-                          uuid
-                        }
-                      }
-                    }
-                  }
-                }
-              }`, { input: { restaurantUuid: msg.args[0] } })
-          ]
+          [ UpvoteRestaurantMutation(msg.restaurantUuid, model.auth.token) ]
         ];
+      }
 
-      case Msg.UPVOTE_RESP:
-        const resp = msg.args[0];
+      case Msg.LOGINFORM_SUBMIT_CLICK: {
+        const username = document.querySelector('.loginForm_username').value;
+        const password = document.querySelector('.loginForm_password').value;
+        return [
+          model,
+          [ TokenAuthMutation(username, password) ]
+        ];
+      }
+
+      case Msg.UPVOTE_RESP: {
         let newModel;
-        if (resp?.errors?.length) {
-          newModel = updateErrors(resp.errors, model);
+        if (msg.resp?.errors?.length) {
+          newModel = updateErrors(msg.resp.errors, model);
         } else {
-          newModel = updateSingleRestaurant(resp.data.upvoteRestaurant.vote.restaurant, model);
+          newModel = updateSingleRestaurant(msg.resp.data.upvoteRestaurant.vote.restaurant, model);
         }
         return [ newModel, [] ];
+      }
+
+      case Msg.TOKEN_AUTH_RESP: {
+        if (msg.resp?.errors?.length) {
+          return [
+            updateErrors(msg.resp.errors, model),
+            []
+          ];
+        } else {
+          const auth = msg.resp.data.tokenAuth;
+          return [
+            updateAuth(auth, model),
+            [ MeQuery(auth.token) ]
+          ];
+        }
+      }
+
+      case Msg.ME_RESP: {
+        if (msg.resp?.errors?.length) {
+          return [
+            updateErrors(msg.resp.errors, model),
+            []
+          ];
+        } else {
+          const user = msg.resp.data.me;
+          return [
+            updateUser(user, model),
+            []
+          ];
+        }
+      }
     }
     return [model, []];
   };
@@ -170,14 +278,31 @@ document.addEventListener('DOMContentLoaded', () => {
     };
   };
 
+  const updateAuth = (auth, model) => {
+    return {
+      ...model,
+      auth
+    };
+  };
+
+  const updateUser = (user, model) => {
+    return {
+      ...model,
+      user
+    };
+  };
+
   /*
    * View
    */
-  const view = ({restaurants, history, errors}) => {
+  const view = ({restaurants, history, errors, auth, user}) => {
     return `
+      <section>${userBlock(user)}</section>
+      <hr/>
+
       <h1>Today</h1>
       <section>
-        ${restaurantsList(restaurants)}
+        ${restaurantsList(restaurants, user)}
       </section>
 
       <hr/>
@@ -192,7 +317,32 @@ document.addEventListener('DOMContentLoaded', () => {
       `;
   };
 
-  const restaurantsList = (list) => {
+  const userBlock = (user) => {
+    if (!user) {
+      return loginForm();
+    }
+    return `
+      <div class="userBlock">
+        <span>${user.firstName}</span>
+        <span>${user.lastName}</span>
+        <span>&lt;${user.email}&gt;</span>
+      </div>
+    `;
+  };
+
+  const loginForm = () => {
+    return `
+      <div class="loginForm">
+        <input class="loginForm_username" type="text" placeholder="username" />
+        <input class="loginForm_password" type="password" placeholder="password" />
+        <button class="loginForm_submit" onClick="window.app.handleEvent('LOGINFORM_SUBMIT_CLICK')">
+          Login
+        </button>
+      </div>
+    `;
+  };
+
+  const restaurantsList = (list, user) => {
     return `
       <table class="restaurantsList">
         <tr>
@@ -201,23 +351,26 @@ document.addEventListener('DOMContentLoaded', () => {
           <th>Users voted</th>
           <th></th>
         </tr>
-        ${list.map(restaurantsListItem).join('')}
+        ${list.map((item) => restaurantsListItem(item, user)).join('')}
       </table>
     `;
   }
 
-  const restaurantsListItem = ({uuid, name, todayVotesWeight, todayVotesUsers}) => {
+  const restaurantsListItem = ({uuid, name, todayVotesWeight, todayVotesUsers}, user) => {
     return `
       <tr class="restaurantsListItem" id="${uuid}">
         <td>${name}</td>
         <td>${todayVotesWeight}</td>
         <td>${todayVotesUsers}</td>
-        <td>${voteButton(uuid)}</td>
+        <td>${voteButton(uuid, user)}</td>
       </tr>
     `;
   };
 
-  const voteButton = (uuid) => {
+  const voteButton = (uuid, user) => {
+    if (!user) {
+      return ``;
+    }
     return `
       <button class="voteButton" onClick="window.app.handleEvent('VOTE_CLICK', '${uuid}')">
         Vote
@@ -312,33 +465,6 @@ document.addEventListener('DOMContentLoaded', () => {
       this.handleMessage(msg);
     }
   };
-
-  function Messages  (names)  {
-    const result = {};
-    for (const name of names) {
-      const msgType = (...args) => ([name, ...args]);
-      msgType.name = name;
-      result[name] = msgType;
-    }
-    return result;
-  };
-
-  const Cmd = (fn) => (msg, ...args) => {
-    return {fn, msg, args};
-  };
-
-  const FetchCmd = Cmd((url, opts) => {
-    return fetch(url, opts).then(resp=>resp.json());
-  });
-
-  const GraphQL = (msg, query, variables) =>
-    FetchCmd(msg, '/api/graphql', {
-      method: 'post',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ query, variables })
-    });
 
 
   /*

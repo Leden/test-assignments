@@ -189,6 +189,7 @@ LOGGING: t.Dict[str, t.Any] = {
 AUTH_USER_MODEL = "users.User"
 
 AUTHENTICATION_BACKENDS = (
+    "graphql_jwt.backends.JSONWebTokenBackend",
     "django.contrib.auth.backends.ModelBackend",
     "lunchvote.users.backends.EmailBackend",
 )
@@ -207,7 +208,7 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 # GraphQL
 GRAPHENE = {
     "SCHEMA": "lunchvote.api.schema.schema",
-    "MIDDLEWARE": [],  # TODO: authentication
+    "MIDDLEWARE": ["graphql_jwt.middleware.JSONWebTokenMiddleware"],
     "ATOMIC_MUTATIONS": True,
 }
 
