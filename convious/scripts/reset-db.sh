@@ -7,12 +7,15 @@ set -eux
     exit 1
 }
 
-APPS="users"
+APPS="users restaurants"
+
 
 python manage.py reset_db --noinput -c
 python manage.py migrate
 
-printf '%s' "$APPS" \
-  | xargs -I {} python manage.py loaddata initial_data --app {}
+for app in $APPS
+do
+  python manage.py loaddata initial_data --app "$app"
+done
 
 python manage.py createinitialrevisions
