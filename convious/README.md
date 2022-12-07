@@ -4,8 +4,8 @@
 
 Dear reviewer, thank you for finding time to look at this repo.
 In front of you lies the result of several days of my work.
-I hope you will find my solution adequate and you'll enjoy reading this code as
-much as I have writing it.
+I hope you will find my solution acceptable, and enjoy reading this code as
+much as I have enjoyed writing it.
 
 
 ## Architecture and code layout overview
@@ -27,19 +27,15 @@ Python package, instead of having a separate package for each app.
 - `users` app contains the custom User model and related business logic.
 - `votes` app contains the Vote model and related business logic.
 
-This project does follows neither "fat models" nor "fat views" approach. Instead, it
-attempts to contain the business logic in its own layer. The corresponding code usually
-is found within `services` module or package inside of each app.
+This project follows neither "fat models" nor "fat views" approach. Instead, it
+attempts to contain the business logic in its own layer. The corresponding code
+can be found in `services` module inside of each app. In my experience, such
+layout has proven to be more scalable for big projects, than the other two mentioned.
 
 It is also worth mentioning that some of the dependency packages (i.e. Celery) or utilities in `lib`
 are not used. This is due to the fact that this project was bootstrapped from the
-cookiecutter template I'm using for most of my production projects, which contains the
-generic set of most frequently used tools. In this particular case, there was no
-requirement for which using Celery was a proper solution.
-
-Additionally, a handful of simple QoL scripts and `make` commands are included in
-`scripts` directory and `Makefile`, respectively. The names are self-explanatory, and if
-not, the code is.
+cookiecutter template I'm using in most of my production projects, which contains the
+generic set of most frequently used tools.
 
 
 ## Getting Started
@@ -108,7 +104,7 @@ The History section below the Today section displays the results of the votes ha
 over the previous 7 days. Visit again tomorrow and DO NOT reset the database :D
 
 The source code of the frontend app is located in `backend/lunchvote/home/templates/home/index.html`.
-It can be used as an example of huw to query the GraphQL API.
+It can be used as an example of how to use the GraphQL API.
 This app is for demonstrative purposes only and should not be used in production environment.
 
 
