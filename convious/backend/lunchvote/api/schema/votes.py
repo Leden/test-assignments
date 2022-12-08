@@ -4,6 +4,7 @@ from uuid import UUID
 
 import graphene
 from graphene_django import DjangoObjectType
+from graphql_jwt.decorators import login_required
 
 from lunchvote.votes.models import Vote
 from lunchvote.votes.services import get_winner_history
@@ -74,6 +75,7 @@ class UpvoteRestaurant(graphene.Mutation):
 
     vote = graphene.Field(VoteType)
 
+    @login_required
     def mutate(root, info, input):
         user = info.context.user
         vote = upvote_restaurant(restaurant_uuid=input.restaurant_uuid, user=user)

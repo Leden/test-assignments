@@ -48,7 +48,7 @@ document.addEventListener('DOMContentLoaded', () => {
       method: 'post',
       headers: {
         'Content-Type': 'application/json',
-        ...(authToken ? {Authorization: `Bearer ${authToken}`} : {})
+        ...(authToken ? {Authorization: `JWT ${authToken}`} : {})
       },
       body: JSON.stringify({ query, variables })
     });
