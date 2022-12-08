@@ -115,6 +115,13 @@ You will find the built-in GraphQL sandbox called GraphiQL. It allows to explore
 schema, write and execute queries and mutations.
 
 
+### Django Admin
+
+Visit `/admin` URL and use the default (`root:root`) user credentials to log into the Django admin interface.
+It implements the basic CRUD operations on Users and Restaurants.
+This is the only way of managing User accounts on the web currently.
+
+
 ### Useful `make` commands
 - `make build` stops the server and rebuilds the Docker image. Do this after
     adding/removing/updating a Python dependency (via `poetry add` or by editing `pyproject.toml`)
