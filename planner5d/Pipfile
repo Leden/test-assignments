@@ -1,0 +1,21 @@
+[[source]]
+url = "https://pypi.org/simple"
+verify_ssl = true
+name = "pypi"
+
+[packages]
+aiohttp = {extras = ["speedups"], version = "*"}
+click = "*"
+
+[dev-packages]
+aioresponses = "*"
+faker = "*"
+pre-commit = "*"
+pytest = "*"
+pytest-asyncio = "*"
+
+[requires]
+python_version = "3.12"
+
+[pipenv]
+sort_pipfile = true
