@@ -1,0 +1,49 @@
+FROM python:3.11.0 AS base
+
+ENV APP_DIR /app
+
+WORKDIR $APP_DIR/
+
+
+FROM base AS builder
+
+ENV PIP_DEFAULT_TIMEOUT=100 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1 \
+    PIP_NO_CACHE_DIR=1 \
+    POETRY_VERSION=1.1.7
+
+COPY pyproject.toml poetry.lock ./
+RUN python -m venv /venv && \
+    pip install "poetry==$POETRY_VERSION" && \
+    poetry export -f requirements.txt --without-hashes | /venv/bin/pip install -r /dev/stdin
+
+COPY . .
+RUN poetry build \
+  && /venv/bin/pip install dist/*.whl \
+  && . /venv/bin/activate \
+  && ./manage.py collectstatic -v3 --noinput
+
+
+FROM builder AS django
+
+COPY --from=builder /venv /venv
+
+COPY docker-entrypoint.sh ./
+
+RUN echo ". /venv/bin/activate" >> "$HOME/.bashrc"
+
+ENV DJANGO_PORT 80
+
+ENV WORKERS_AMOUNT 5
+
+EXPOSE 80
+
+ENTRYPOINT ["./docker-entrypoint.sh"]
+
+# CMD options:
+#
+# CMD ["docker-start", "gunicorn"]
+# CMD ["docker-start", "celery"]
+# CMD ["docker-start", "celerybeat"]
+
+CMD ["docker-start", "gunicorn"]

@@ -1,0 +1,58 @@
+[tool.poetry]
+name = "lunchvote"
+version = "1.0.0"
+description = "vote for places to lunch today"
+authors = ["Denis Lesnov <denis@lesnov.me>"]
+license = "proprietary"
+
+[tool.poetry.dependencies]
+python = "3.11.0"
+celery = "~5.2.6"
+django = "~3.2"
+django-celery-beat = "~2.2.1"
+django-cors-headers = "~3.12.0"
+django-countries = "~7.3.2"
+django-enumfields = "~2.1.1"
+django-extensions = "~3.1.5"
+django-redis = "~5.2.0"
+django-reversion = "~5.0.0"
+gunicorn = "~20.1.0"
+psycopg2-binary = "~2.9.3"
+whitenoise = {extras = ["brotli"], version = "~6.1.0"}
+graphene-django = "^3.0.0"
+django-graphql-jwt = "^0.3.4"
+
+[tool.poetry.dev-dependencies]
+factory-boy = "^3.2.1"
+flaky = "^3.7.0"
+ipdb = "^0.13.9"
+pre-commit = "^2.19.0"
+pytest = "^7.1.2"
+pytest-cov = "^3.0.0"
+pytest-django = "^4.5.2"
+pytest-factoryboy = "^2.3.0"
+pytest-randomly = "^3.12.0"
+werkzeug = "~2.0.0"
+
+[tool.isort]
+force_single_line = true
+line_length = 88
+known_django = "django"
+sections = "FUTURE,STDLIB,DJANGO,THIRDPARTY,FIRSTPARTY,LOCALFOLDER"
+default_section = "THIRDPARTY"
+known_first_party = "lunchvote"
+
+[tool.pytest.ini_options]
+minversion = "6.0"
+addopts = "--no-migrations -p no:warnings -vv --ff --reuse-db"
+python_files = [
+    "tests.py",
+    "test_*.py",
+    "*_tests.py",
+]
+DJANGO_SETTINGS_MODULE = "lunchvote.settings"
+junit_family = "xunit1"
+
+[build-system]
+requires = ["poetry>=0.12"]
+build-backend = "poetry.masonry.api"

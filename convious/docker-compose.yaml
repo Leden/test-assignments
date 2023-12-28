@@ -1,0 +1,30 @@
+version: "3.7"
+services:
+  lunchvote-django: &lunchvote-django
+    container_name: lunchvote-django
+    depends_on:
+      - lunchvote-pg-db
+      - lunchvote-redis
+
+  lunchvote-pg-db:
+    image: postgres:12-alpine
+    container_name: lunchvote-pg-db
+    volumes:
+      - lunchvote-pg-data:/var/lib/postgresql/data/
+    environment:
+      - POSTGRES_USER=lunchvote_user
+      - POSTGRES_PASSWORD=long_lunchvote_db_password
+      - POSTGRES_DB=lunchvote_db
+    ports:
+    - 5432:5432
+
+  lunchvote-redis:
+    image: redis:5.0-alpine
+    container_name: lunchvote-redis
+    ports:
+      - 6379:6379
+
+
+volumes:
+  lunchvote-pg-data:
+    name: lunchvote-pg-data

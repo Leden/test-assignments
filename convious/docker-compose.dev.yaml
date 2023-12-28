@@ -1,0 +1,50 @@
+version: "3.7"
+services:
+  lunchvote-django: &lunchvote-django
+    build: backend
+    env_file: .env
+    environment:
+      - DJANGO_DEBUG=1
+      - CELERY_BROKER_URL=redis://lunchvote-redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://lunchvote-redis:6379/0
+      - REDIS_LOCATION=redis://lunchvote-redis:6379/0
+    volumes:
+      - type: bind
+        source: ./backend
+        target: /app
+      - type: bind
+        source: ./scripts
+        target: /scripts
+    ports:
+      - 8000:8000
+    depends_on:
+      - lunchvote-pg-db
+      - lunchvote-redis
+    stdin_open: true
+    tty: true
+
+  lunchvote-celery:
+    <<: *lunchvote-django
+    container_name: lunchvote-celery
+    command:
+      - docker-start
+      - celery
+    ports: []
+    depends_on:
+      - lunchvote-redis
+      - lunchvote-pg-db
+    stdin_open: false
+    tty: false
+
+  lunchvote-celerybeat:
+    <<: *lunchvote-django
+    container_name: lunchvote-celerybeat
+    command:
+      - docker-start
+      - celerybeat
+    ports: []
+    depends_on:
+      - lunchvote-redis
+      - lunchvote-django
+    stdin_open: false
+    tty: false

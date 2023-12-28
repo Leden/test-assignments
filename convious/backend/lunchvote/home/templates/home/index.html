@@ -1,0 +1,478 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <style>
+    </style>
+  </head>
+  <body>
+    <div id="app"></div>
+    <script>
+document.addEventListener('DOMContentLoaded', () => {
+  /*
+   * Constants
+   */
+  const MILLISECOND = 1;
+  const SECOND = 1000 * MILLISECOND;
+  const MINUTE = 60 * SECOND;
+  const HOUR = 60 * MINUTE;
+  const DAY = 24 * HOUR;
+  const WEEK = 7 * DAY;
+
+
+  /*
+   * Messages
+   */
+  const Msg = {
+    RESTAURANTS_AND_WINNERS_RESP: function (resp) { this.resp = resp; },
+    VOTE_CLICK: function (uuid) { this.restaurantUuid = uuid; },
+    UPVOTE_RESP: function (resp) { this.resp = resp; },
+    TOKEN_AUTH_RESP: function (resp) { this.resp = resp; },
+    LOGINFORM_SUBMIT_CLICK: function () {},
+    ME_RESP: function (resp) { this.resp = resp; },
+  };
+
+
+  /*
+   * Commands
+   */
+  const Cmd = (fn) => (msg, ...args) => {
+    return {fn, msg, args};
+  };
+
+  const Fetch = Cmd((url, opts) => {
+    return fetch(url, opts).then(resp=>resp.json());
+  });
+
+  const GraphQL = (msg, query, variables, authToken) =>
+    Fetch(msg, '/api/graphql', {
+      method: 'post',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(authToken ? {Authorization: `JWT ${authToken}`} : {})
+      },
+      body: JSON.stringify({ query, variables })
+    });
+
+  const RestaurantsAndWinnersQuery = (fromDate, toDate, authToken) => GraphQL(
+    Msg.RESTAURANTS_AND_WINNERS_RESP,
+    `
+    query($fromDate: Date!, $toDate: Date!) {
+      restaurants {
+        uuid
+        name
+        todayVotes {
+          weight
+          user {
+            uuid
+          }
+        }
+      }
+      winners(fromDate: $fromDate, toDate: $toDate) {
+        date
+        restaurant {
+          uuid
+          name
+        }
+      }
+    }`,
+    { fromDate, toDate },
+    authToken
+  );
+
+  const UpvoteRestaurantMutation = (restaurantUuid, authToken) => GraphQL(
+    Msg.UPVOTE_RESP,
+    `
+    mutation upvoteRestaurant($input: UpvoteRestaurantInput!) {
+      upvoteRestaurant(input: $input) {
+        vote {
+          restaurant {
+            uuid
+            name
+            todayVotes {
+              weight
+              user {
+                uuid
+              }
+            }
+          }
+        }
+      }
+    }`,
+    { input: { restaurantUuid } },
+    authToken
+  );
+
+  const TokenAuthMutation = (username, password) => GraphQL(
+    Msg.TOKEN_AUTH_RESP,
+    `
+    mutation tokenAuth($username: String!, $password: String!) {
+      tokenAuth(username: $username, password: $password) {
+        token
+        payload
+        refreshExpiresIn
+      }
+    }
+    `,
+    { username, password }
+  );
+
+  const MeQuery = (authToken) => GraphQL(
+    Msg.ME_RESP,
+    `
+    query {
+      me {
+        firstName
+        lastName
+        email
+        uuid
+      }
+    }
+    `,
+    {},
+    authToken
+  );
+
+
+  /*
+   * Init
+   */
+  const init = () => {
+    const now = new Date();
+    const yesterday = addDateDelta(now, -DAY);
+    const weekAgo = addDateDelta(yesterday, -WEEK);
+    const fromDate = weekAgo.toJSON().slice(0, 10);
+    const toDate = yesterday.toJSON().slice(0, 10);
+    return [
+      { restaurants: [], history: [], errors: [], auth: null, user: null },
+      [
+        RestaurantsAndWinnersQuery(fromDate, toDate)
+      ]
+    ];
+  };
+
+  const addDateDelta = (date, deltaMs) => {
+    const result = new Date();
+    result.setTime(date.getTime() + deltaMs);
+    return result;
+  };
+
+
+  /*
+   * Update
+   */
+  const update = (model, msg) => {
+    switch (msg.constructor) {
+      case Msg.RESTAURANTS_AND_WINNERS_RESP: {
+        const { restaurants, winners } = msg.resp.data;
+        return [
+          updateHistory(winners, updateRestaurants(restaurants, model)),
+          []
+        ];
+      }
+
+      case Msg.VOTE_CLICK: {
+        return [
+          model,
+          [ UpvoteRestaurantMutation(msg.restaurantUuid, model.auth.token) ]
+        ];
+      }
+
+      case Msg.LOGINFORM_SUBMIT_CLICK: {
+        const username = document.querySelector('.loginForm_username').value;
+        const password = document.querySelector('.loginForm_password').value;
+        return [
+          model,
+          [ TokenAuthMutation(username, password) ]
+        ];
+      }
+
+      case Msg.UPVOTE_RESP: {
+        let newModel;
+        if (msg.resp?.errors?.length) {
+          newModel = updateErrors(msg.resp.errors, model);
+        } else {
+          newModel = updateSingleRestaurant(msg.resp.data.upvoteRestaurant.vote.restaurant, model);
+        }
+        return [ newModel, [] ];
+      }
+
+      case Msg.TOKEN_AUTH_RESP: {
+        if (msg.resp?.errors?.length) {
+          return [
+            updateErrors(msg.resp.errors, model),
+            []
+          ];
+        } else {
+          const auth = msg.resp.data.tokenAuth;
+          return [
+            updateAuth(auth, model),
+            [ MeQuery(auth.token) ]
+          ];
+        }
+      }
+
+      case Msg.ME_RESP: {
+        if (msg.resp?.errors?.length) {
+          return [
+            updateErrors(msg.resp.errors, model),
+            []
+          ];
+        } else {
+          const user = msg.resp.data.me;
+          return [
+            updateUser(user, model),
+            []
+          ];
+        }
+      }
+    }
+    return [model, []];
+  };
+
+  const updateSingleRestaurant = (restaurant, model) => {
+    const restaurants = sortRestaurants(model.restaurants.map(
+      (r) => (r.uuid === restaurant.uuid) ? hydrateRestaurant(restaurant) : r
+    ));
+    return {...model, restaurants};
+  };
+
+  const updateRestaurants = (restaurants, model) => {
+    return {
+      ...model,
+      restaurants: sortRestaurants(restaurants.map(hydrateRestaurant))
+    };
+  }
+
+  const hydrateRestaurant = (restaurant) => {
+    let todayVotesWeight = 0;
+    const users = new Set();
+    restaurant.todayVotes.forEach(({weight, user: { uuid }}) => {
+      todayVotesWeight += parseFloat(weight);
+      users.add(uuid);
+    });
+    return {...restaurant, todayVotesWeight, todayVotesUsers: users.size}
+  };
+
+  const sortRestaurants = (restaurants) => Array.of(...restaurants).sort(
+    (a, b) => {
+      if (a.todayVotesWeight < b.todayVotesWeight) return 1;
+      if (a.todayVotesWeight > b.todayVotesWeight) return -1;
+      if (a.todayVotesUsers < b.todayVotesUsers) return 1;
+      if (a.todayVotesUsers > b.todayVotesUsers) return -1;
+      if (a.name < b.name) return -1;
+      if (a.name > b.name) return 1;
+      return 0;
+    });
+
+  const updateHistory = (history, model) => {
+    return {
+      ...model,
+      history: Array.of(...history).reverse()
+    };
+  };
+
+  const updateErrors = (errors, model) => {
+    return {
+      ...model,
+      errors: [...model.errors, ...errors]
+    };
+  };
+
+  const updateAuth = (auth, model) => {
+    return {
+      ...model,
+      auth
+    };
+  };
+
+  const updateUser = (user, model) => {
+    return {
+      ...model,
+      user
+    };
+  };
+
+  /*
+   * View
+   */
+  const view = ({restaurants, history, errors, auth, user}) => {
+    return `
+      <section>${userBlock(user)}</section>
+      <hr/>
+
+      <h1>Today</h1>
+      <section>
+        ${restaurantsList(restaurants, user)}
+      </section>
+
+      <hr/>
+
+      <h1>History</h1>
+      <section>
+        ${historyList(history)}
+      </section>
+
+      <hr/>
+      ${errorsList(errors)}
+      `;
+  };
+
+  const userBlock = (user) => {
+    if (!user) {
+      return loginForm();
+    }
+    return `
+      <div class="userBlock">
+        <span>${user.firstName}</span>
+        <span>${user.lastName}</span>
+        <span>&lt;${user.email}&gt;</span>
+      </div>
+    `;
+  };
+
+  const loginForm = () => {
+    return `
+      <div class="loginForm">
+        <input class="loginForm_username" type="text" placeholder="username" />
+        <input class="loginForm_password" type="password" placeholder="password" />
+        <button class="loginForm_submit" onClick="window.app.handleEvent('LOGINFORM_SUBMIT_CLICK')">
+          Login
+        </button>
+      </div>
+    `;
+  };
+
+  const restaurantsList = (list, user) => {
+    return `
+      <table class="restaurantsList">
+        <tr>
+          <th>Restaurant</th>
+          <th>Votes weight</th>
+          <th>Users voted</th>
+          <th></th>
+        </tr>
+        ${list.map((item) => restaurantsListItem(item, user)).join('')}
+      </table>
+    `;
+  }
+
+  const restaurantsListItem = ({uuid, name, todayVotesWeight, todayVotesUsers}, user) => {
+    return `
+      <tr class="restaurantsListItem" id="${uuid}">
+        <td>${name}</td>
+        <td>${todayVotesWeight}</td>
+        <td>${todayVotesUsers}</td>
+        <td>${voteButton(uuid, user)}</td>
+      </tr>
+    `;
+  };
+
+  const voteButton = (uuid, user) => {
+    if (!user) {
+      return ``;
+    }
+    return `
+      <button class="voteButton" onClick="window.app.handleEvent('VOTE_CLICK', '${uuid}')">
+        Vote
+      </button>
+    `;
+  };
+
+  const historyList = (history) => {
+    return `
+      <table class="historyList">
+        ${history.map(historyListItem).join('')}
+      </table>
+    `;
+  };
+
+  const historyListItem = ({date, restaurant: { name }}) => {
+    return `
+      <tr class="historyListItem">
+        <td>${date}</td>
+        <td>${name}</td>
+      </tr>
+    `;
+  };
+
+  const errorsList = (errors) => {
+    if (!errors.length) return "";
+
+    const lines = errors.map(({message})=>message).join('\n');
+    return `
+      <h3>Errors</h3>
+      <textarea cols="80" rows=10 readonly class="errorsList">${lines}</textarea>
+    `;
+  };
+
+
+  /*
+   * Utils
+   */
+  class App {
+    constructor(init, update, view, msgType, node) {
+      this.init = init;
+      this.update = update;
+      this.view = view;
+      this.msgType = msgType;
+      this.node = node;
+      this.model = null;
+      this.commands = [];
+    }
+
+    start() {
+      this.execute(this.init)
+    }
+
+    execute(fn) {
+      const [model, commands] = fn();
+      this.model = model;
+      this.pushCommands(commands);
+      this.render();
+      this.handleCommands();
+    }
+
+    pushCommands(commands) {
+      // TODO: handle invalid input
+      this.commands.push(...commands);
+    }
+
+    render() {
+      const html = this.view(this.model);
+      this.node.innerHTML = html;
+    }
+
+    handleCommands() {
+      if (!this.commands.length) return;
+      const cmd = this.commands.shift();
+      this.executeCommand(cmd);
+      this.handleCommands();
+    }
+
+    executeCommand(cmd) {
+      new Promise((resolve) => {
+        resolve(cmd.fn(...cmd.args))
+      }).then((val) => this.handleMessage(new cmd.msg(val)));
+    }
+
+    handleMessage(msg) {
+      this.execute(() => this.update(this.model, msg));
+    }
+
+    handleEvent(name, ...args) {
+      const ctor = this.msgType[name];
+      const msg = new ctor(...args);
+      this.handleMessage(msg);
+    }
+  };
+
+
+  /*
+   * App
+   */
+  window.app = new App(init, update, view, Msg, document.getElementById('app'));
+  window.app.start();
+});
+    </script>
+  </body>
+</html>

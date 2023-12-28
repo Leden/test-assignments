@@ -1,0 +1,15 @@
+**/.DS_Store
+*.egg-info/
+*.py[cod]
+*.sql
+*.sqlite3
+*.swp
+.coverage
+.env
+.idea/
+.tool-versions
+__pycache__/
+celerybeat-schedule
+celerybeat.pid
+erl_crash.dump
+tags
