@@ -45,6 +45,8 @@ task I was expecting;
 - Unused (I think): celery, `lib/registry.py`, `lib/reversion.py`
 - Makefile and scripts are neat and I mostly like it, but it wasn't without
 trouble for me;
+
+
 Feedback from Reviewer #2:
 Overall it looks good, I get that it’s a bootstrapped project, but I would have removed the celery,
 reversion and other not needed dependencies. I don’t really get why the choice of graphql (the
