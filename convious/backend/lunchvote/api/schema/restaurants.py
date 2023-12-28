@@ -9,12 +9,17 @@ from lunchvote.votes.services import get_restaurant_today_votes
 
 
 class RestaurantType(DjangoObjectType):
+    """
+    Restaurant is a place which can be voted for.
+    """
+
     class Meta:
         model = Restaurant
         fields = ("uuid", "name")
 
     today_votes = graphene.List(
-        graphene.NonNull(graphene.lazy_import("lunchvote.api.schema.votes.VoteType"))
+        graphene.NonNull(graphene.lazy_import("lunchvote.api.schema.votes.VoteType")),
+        description="List of votes cast today",
     )
 
     def resolve_today_votes(parent, info):
